@@ -1,0 +1,9 @@
+D:\Projects\C#\OmegleSpy\OmegleSpy\bin\Debug\OmegleSpy.exe
+D:\Projects\C#\OmegleSpy\OmegleSpy\bin\Debug\OmegleSpy.pdb
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\OmegleSpy.frmSpy.resources
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\OmegleSpy.Properties.Resources.resources
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\OmegleSpy.exe
+D:\Projects\C#\OmegleSpy\OmegleSpy\obj\x86\Debug\OmegleSpy.pdb
