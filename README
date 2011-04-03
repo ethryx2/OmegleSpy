@@ -1,0 +1,5 @@
+OmegleSpy is a very simple application written in C# that opens up two Omegle sessions and allows them to talk to each other while you spy on the conversation. Also, It works with Omegle's reCAPTCHA system.
+
+[ Changelog ]
+4/3/2011:
+ - release
