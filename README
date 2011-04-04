@@ -2,6 +2,7 @@ OmegleSpy is a very simple application written in C# that opens up two Omegle se
 
 [ Changelog ]
 4/3/2011:
+ - updated to version 1.0.0.1
  - using 'bajor.omegle.com' instead of 'omegle.com' for host
  - debug now shows when bots are assigned new session ids
  - starting a new chat convo will send '/disconnect' to any previous live convos
