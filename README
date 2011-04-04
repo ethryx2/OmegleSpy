@@ -9,6 +9,7 @@ OmegleSpy is a very simple application written in C# that opens up two Omegle se
  - pressing ENTER on any of the recaptcha fields will automatically try and submit it
  - you can now talk to both people from the drop down at the bottom
  - sending messages is now done on a seperate thread
+ - sending /disconect to either user (or to Both) will disconnect the chat session(s)
 
 4/2/2011:
  - release
