@@ -13,7 +13,6 @@ namespace OmegleSpy
         public string ID = "";
         public bool PollEvents;
         public System.Drawing.Color chatColor;
-        public ArrayList sendMessages;
         private Thread t;
         private frmSpy f;
         private delegate void HandleEventsDelegate(Hashtable events);
@@ -22,15 +21,18 @@ namespace OmegleSpy
         private PictureBox pbCaptcha;
         private TextBox txtCaptcha;
         private string challengeKey = "";
-        
-        public OmegleBot(frmSpy ff, System.Drawing.Color chatCol, OmegleBot OtherTwin, PictureBox recaptcha, TextBox textCaptcha)
+        private Label lblCaptchaId;
+        private ToolStripStatusLabel lblBotStatus;
+
+        public OmegleBot(frmSpy ff, System.Drawing.Color chatCol, OmegleBot OtherTwin, PictureBox recaptcha, TextBox textCaptcha, Label _lblCaptchaId, ToolStripStatusLabel _lblBotStatus)
         {
             f = ff;
             chatColor = chatCol;
             otherBot = OtherTwin;
             pbCaptcha = recaptcha;
             txtCaptcha = textCaptcha;
-            sendMessages = new ArrayList();
+            lblCaptchaId = _lblCaptchaId;
+            lblBotStatus = _lblBotStatus;
             delHandleEvents = new HandleEventsDelegate(HandleEvents); 
         }
 
@@ -39,7 +41,9 @@ namespace OmegleSpy
             try
             {
                 PollEvents = true;
-                ID = Request("http://www.omegle.com/start?rcs=1&spid=", "").Substring(1, 6);
+                ID = Request("{OMEGLEURL}/start?rcs=1", "").Substring(1, 6);
+                f.txtDebug.Text += "Bot was assigned id " + ID + Environment.NewLine; f.txtDebug.SelectionStart = f.txtDebug.TextLength; f.txtDebug.ScrollToCaret();
+                lblBotStatus.Text = ID + " is idle.";
                 StartPollingAgain();
 
                 return ID;
@@ -50,20 +54,50 @@ namespace OmegleSpy
             }
         }
 
+        public void Disconnect()
+        {
+            try
+            {
+                PollEvents = false;
+                Request("{OMEGLEURL}/disconnect", "id=" + ID);
+                f.Convo("Bot ", System.Drawing.Color.DarkGray, System.Drawing.FontStyle.Bold, false);
+                f.Convo(ID, System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
+                f.Convo(" has disconnected.", System.Drawing.Color.DarkGray, System.Drawing.FontStyle.Bold, true);
+                f.cboTalkAs.Items.Remove(this.ID);
+                lblBotStatus.Text = ID + " is idle.";
+            }
+            catch { }
+        }
+
         public void StartPollingAgain()
         {
             t = new Thread(EventWatcherThread);
             t.Start();
         }
 
-        public void Say(string what)
+        public bool Say(string what)
         {
-            Request("http://www.omegle.com/send", "id=" + ID + "&msg=" + what);
+            if (what == "/disconnect")
+            {
+                this.Disconnect();
+                return false;
+            }
+            else
+            {
+                Thread th = new Thread(SayThread);
+                th.Start(what);
+                return true;
+            }
+        }
+
+        private void SayThread(object what)
+        {
+            Request("{OMEGLEURL}/send", "id=" + ID + "&msg=" + (string)what);
         }
 
         public void TryCaptchaResponse(string response, string challenge)
         {
-            string answer = Request("http://www.omegle.com/recaptcha", "id=" + ID + "&challenge=" + challenge + "&response=" + response);
+            string answer = Request("{OMEGLEURL}/recaptcha", "id=" + ID + "&challenge=" + challenge + "&response=" + response);
             if (answer == "win")
             {
                 f.panelRecaptcha.Visible = false;
@@ -83,6 +117,7 @@ namespace OmegleSpy
             f.panelRecaptcha.Visible = true;
             pbCaptcha.Enabled = true;
             txtCaptcha.Enabled = true;
+            lblCaptchaId.Text = ID;
             string[] captchaResponseFromAPI = Request("http://www.google.com/recaptcha/api/challenge?k=" + challengeKey, "", "GET").Split(',');
             string challenge = captchaResponseFromAPI[1].Substring(18, 164);
             f.txtDebug.Text += ID + " > Got challenge: " + challenge + Environment.NewLine; f.txtDebug.SelectionStart = f.txtDebug.TextLength; f.txtDebug.ScrollToCaret();
@@ -95,15 +130,7 @@ namespace OmegleSpy
             while (true)
             {
                 if (PollEvents)
-                {
                     GetEvents();
-                    if (sendMessages.Count > 0)
-                    {
-                        for (int x = 0; x < sendMessages.Count; x++)
-                            this.Say(sendMessages[x].ToString());
-                        sendMessages.Clear();
-                    }
-                }
                 else
                     break;
                 Thread.Sleep(1000);
@@ -112,7 +139,7 @@ namespace OmegleSpy
 
         private void GetEvents()
         {
-            string event_json = Request("http://www.omegle.com/events", "id=" + ID);
+            string event_json = Request("{OMEGLEURL}/events", "id=" + ID);
 
             if (event_json != "null")
             {
@@ -133,12 +160,14 @@ namespace OmegleSpy
                 {
                     case "typing":
                         if (otherBot != null && otherBot.PollEvents)
-                            otherBot.Request("http://www.omegle.com/typing", "id=" + otherBot.ID);
+                            otherBot.Request("{OMEGLEURL}/typing", "id=" + otherBot.ID);
+                        lblBotStatus.Text = ID + " is typing..";
                         break;
 
                     case "stoppedTyping":
                         if (otherBot != null && otherBot.PollEvents)
-                            otherBot.Request("http://www.omegle.com/stoppedtyping", "id=" + otherBot.ID);
+                            otherBot.Request("{OMEGLEURL}/stoppedtyping", "id=" + otherBot.ID);
+                        lblBotStatus.Text = ID + " is connected.";
                         break;
 
                     case "waiting":
@@ -146,6 +175,7 @@ namespace OmegleSpy
 
                     case "connected":
                         f.Convo("Found a stranger.", System.Drawing.Color.Gray, System.Drawing.FontStyle.Bold, true);
+                        lblBotStatus.Text = ID + " is connected.";
                         break;
 
                     case "gotMessage":
@@ -154,6 +184,7 @@ namespace OmegleSpy
                         f.Convo(en.Value.ToString(), System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
                         if(otherBot != null && otherBot.PollEvents)
                             otherBot.Say(en.Value.ToString());
+                        lblBotStatus.Text = ID + " is connected.";
                         break;
 
                     case "strangerDisconnected":
@@ -162,6 +193,7 @@ namespace OmegleSpy
                         f.Convo(ID, System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
                         f.Convo(" has disconnected.", System.Drawing.Color.DarkGray, System.Drawing.FontStyle.Bold, true);
                         f.cboTalkAs.Items.Remove(this.ID);
+                        lblBotStatus.Text = ID + " is idle.";
                         break;
 
                     case "recaptchaRequired":
@@ -175,6 +207,8 @@ namespace OmegleSpy
                         f.panelRecaptcha.Visible = true;
                         pbCaptcha.Enabled = true;
                         txtCaptcha.Enabled = true;
+                        txtCaptcha.Text = "";
+                        txtCaptcha.Focus();
                         System.Windows.Forms.MessageBox.Show("You have incorrectly answered the reCAPTCHA for Bot " + ID + ". Try again.");
                         break;
 
@@ -189,51 +223,54 @@ namespace OmegleSpy
         private Hashtable ParseJSON(string json)
         {
             Hashtable result = new System.Collections.Hashtable();
-
-            // [["connected"], ["gotMessage", "lol"]]
-            json = json.Remove(0, 1);
-            json = json.Remove(json.Length - 1, 1);
-            string[] json_messages = json.Split(']');
-
-            foreach (string message in json_messages)
+            try
             {
-                string m = message;
+                // [["connected"], ["gotMessage", "lol"]]
+                json = json.Remove(0, 1);
+                json = json.Remove(json.Length - 1, 1);
+                string[] json_messages = json.Split(']');
 
-                if (m == "")
-                    break;
-
-                if (message.Substring(0, 2) == ", ")
-                    m = message.Remove(0, 2);
-
-                m.Remove(0, 1); // Remove ["
-
-                string[] split = m.Split(',');
-                string key = "", value = "";
-
-                if (split.Length >= 1)
+                foreach (string message in json_messages)
                 {
-                    key = split[0];
+                    string m = message;
 
-                    // Strip off " surrounding key
-                    key = key.Remove(0, 2);
-                    key = key.Remove(key.Length - 1, 1);
+                    if (m == "")
+                        break;
+
+                    if (message.Substring(0, 2) == ", ")
+                        m = message.Remove(0, 2);
+
+                    m.Remove(0, 1); // Remove ["
+
+                    string[] split = m.Split(',');
+                    string key = "", value = "";
+
+                    if (split.Length >= 1)
+                    {
+                        key = split[0];
+
+                        // Strip off " surrounding key
+                        key = key.Remove(0, 2);
+                        key = key.Remove(key.Length - 1, 1);
+                    }
+
+                    if (split.Length == 2)
+                    {
+                        value = split[1].Remove(0, 1);
+
+                        // Strip off " surrounding value
+                        value = value.Remove(0, 1);
+                        value = value.Remove(value.Length - 1, 1);
+                    }
+
+                    try
+                    {
+                        result.Add(key, value);
+                    }
+                    catch { }
                 }
-
-                if (split.Length == 2)
-                {
-                    value = split[1].Remove(0, 1);
-
-                    // Strip off " surrounding value
-                    value = value.Remove(0, 1);
-                    value = value.Remove(value.Length - 1, 1);
-                }
-
-                try
-                {
-                    result.Add(key, value);
-                }
-                catch { }
             }
+            catch { }
 
             return result;
         }
@@ -242,6 +279,8 @@ namespace OmegleSpy
         {
             try
             {
+                url = url.Replace("{OMEGLEURL}", "http://bajor.omegle.com");
+
                 WebRequest request;
 
                 request = WebRequest.Create(url);
@@ -260,7 +299,7 @@ namespace OmegleSpy
                     dataStream.Close();
                 }
 
-                WebResponse response = request.GetResponse();
+                WebResponse response = request.GetResponse(); // code pauses here until response is received (aka, something happened)
 
                 dataStream = response.GetResponseStream();
                 StreamReader reader = new StreamReader(dataStream);

@@ -14,18 +14,19 @@ namespace OmegleSpy
     {
         private OmegleBot Bot1 = null;
         private OmegleBot Bot2 = null;
+        private frmAbout _frmAbout = null;
 
         public frmSpy()
         {
             InitializeComponent();
-            Bot1 = new OmegleBot(this, Color.Red, Bot2, pbCaptcha, txtCaptchaResponse);
-            Bot2 = new OmegleBot(this, Color.Blue, Bot1, pbCaptcha2, txtCaptchaResponse2);
+            Bot1 = new OmegleBot(this, Color.Red, Bot2, pbCaptcha, txtCaptchaResponse, lblCaptchaId, lblBotStatus);
+            Bot2 = new OmegleBot(this, Color.Blue, Bot1, pbCaptcha2, txtCaptchaResponse2, lblCaptchaId2, lblBotStatus2);
         }
 
         public void Convo(string text, Color color, FontStyle fs, bool newLine)
         {
             txtConversation.SelectionStart = txtConversation.TextLength;
-            txtConversation.SelectionFont = new Font("Tahoma", 11, fs);
+            txtConversation.SelectionFont = new Font("Tahoma", 10, fs);
             txtConversation.SelectionColor = color;
             if(newLine)
                 txtConversation.SelectedText = text + Environment.NewLine;
@@ -50,6 +51,12 @@ namespace OmegleSpy
         private void connectionToolStripMenuItem_Click(object sender, EventArgs e)
         {
             cboTalkAs.Items.Clear();
+            cboTalkAs.Items.Add("Both");
+            cboTalkAs.SelectedIndex = 0;
+            if (Bot1.PollEvents)
+                Bot1.Disconnect();
+            if (Bot2.PollEvents)
+                Bot2.Disconnect();
             string bot1id = Bot1.StartNewSession();
             string bot2id = Bot2.StartNewSession();
             if (bot1id != String.Empty && bot2id != String.Empty)
@@ -105,17 +112,37 @@ namespace OmegleSpy
                 {
                     if (cboTalkAs.SelectedItem.ToString() == Bot1.ID)
                     {
-                        Bot1.sendMessages.Add(txtTalkText.Text);
-                        Convo("You > " + Bot1.ID, Color.DarkGreen, System.Drawing.FontStyle.Bold, false);
-                        Convo(": ", System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
-                        Convo(txtTalkText.Text, System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
+                        bool success = Bot1.Say(txtTalkText.Text);
+                        if (success)
+                        {
+                            Convo("You > " + Bot1.ID, Color.DarkGreen, System.Drawing.FontStyle.Bold, false);
+                            Convo(": ", System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
+                            Convo(txtTalkText.Text, System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
+                        }
                     }
                     else if (cboTalkAs.SelectedItem.ToString() == Bot2.ID)
                     {
-                        Bot2.sendMessages.Add(txtTalkText.Text);
-                        Convo("You > " + Bot2.ID, Color.DarkGreen, System.Drawing.FontStyle.Bold, false);
-                        Convo(": ", System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
-                        Convo(txtTalkText.Text, System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
+                        bool success = Bot2.Say(txtTalkText.Text);
+                        if (success)
+                        {
+                            Convo("You > " + Bot2.ID, Color.DarkGreen, System.Drawing.FontStyle.Bold, false);
+                            Convo(": ", System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
+                            Convo(txtTalkText.Text, System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
+                        }
+                    }
+                    else if (cboTalkAs.SelectedItem.ToString() == "Both")
+                    {
+                        bool success = false;
+                        if(Bot1.PollEvents)
+                            success = Bot1.Say(txtTalkText.Text);
+                        if(Bot2.PollEvents)
+                            success = Bot2.Say(txtTalkText.Text);
+                        if (success)
+                        {
+                            Convo("You > Both", Color.DarkGreen, System.Drawing.FontStyle.Bold, false);
+                            Convo(": ", System.Drawing.Color.Black, System.Drawing.FontStyle.Bold, false);
+                            Convo(txtTalkText.Text, System.Drawing.Color.Black, System.Drawing.FontStyle.Regular, true);
+                        }
                     }
                     
                 }
@@ -123,6 +150,30 @@ namespace OmegleSpy
                 txtTalkText.Text = "";
                 txtTalkText.Focus();
             }
+        }
+
+        private void txtCaptchaResponse_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Return && txtCaptchaResponse.TextLength > 0)
+                this.btnSubmitCaptcha_Click(sender, null);
+        }
+
+        private void txtCaptchaResponse2_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Return && txtCaptchaResponse2.TextLength > 0)
+                this.btnSubmitCaptcha_Click(sender, null);
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_frmAbout == null || _frmAbout.IsDisposed)
+                _frmAbout = new frmAbout();
+            _frmAbout.Show();
+        }
+
+        private void gitHubPageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://github.com/ethryx/OmegleSpy");
         }
     }
 }
